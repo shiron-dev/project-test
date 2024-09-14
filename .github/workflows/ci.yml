@@ -1,0 +1,49 @@
+name: Update Project Status
+
+on:
+  issues:
+    types: [opened, assigned, closed]
+  pull_request:
+    types: [opened, converted_to_draft, ready_for_review]
+  pull_request_target:
+    types: [opened, converted_to_draft, ready_for_review]
+
+jobs:
+  update_project_status:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check issue event type
+        if: github.event_name == 'issues' && github.event.action == 'opened'
+        run: |
+          echo "New issue created"
+          # Add issue to the project with 'No Status'
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/projects/columns/COLUMN_ID/cards \
+            -d '{"content_id": ${{ github.event.issue.id }}, "content_type": "Issue"}'
+
+      - name: Update status to Ready on assign
+        if: github.event_name == 'issues' && github.event.action == 'assigned'
+        run: |
+          echo "Issue assigned, updating status to Ready"
+          # Update issue status to 'Ready'
+
+      - name: Update status to In Progress on draft PR linked
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft == true
+        run: |
+          echo "Draft PR linked, updating status to In Progress"
+          # Update status to 'In Progress'
+
+      - name: Update status to In Review when PR is opened or draft PR is converted
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+        run: |
+          echo "PR opened or draft converted to PR, updating status to In Review"
+          # Update status to 'In Review'
+
+      - name: Update status to Done on issue close
+        if: github.event_name == 'issues' && github.event.action == 'closed'
+        run: |
+          echo "Issue closed, updating status to Done"
+          # Update issue status to 'Done'
